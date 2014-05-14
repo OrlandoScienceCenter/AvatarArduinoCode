@@ -2,7 +2,7 @@
 /***********************************************************
 *                         DEFINES                          *
 ***********************************************************/
-
+//Pin Defines
 #define BL_NEOPIXEL_S  12
 #define BR_NEOPIXEL_S  11
 #define FL_NEOPIXEL_S  10
@@ -15,6 +15,16 @@
 #define AUDIO_IN       A0
 #define REMOTE_ON      3
 #define REMOTE_OFF     2
+#define COMPUTER_PWR   A1
+
+//MagicNumber Defines
+#define N_PIXELS  16  // Number of pixels in strand
+//#define LED_PIN    6  // NeoPixel LED strand is connected to this pin // ( see above for LED strands)
+#define SAMPLE_WINDOW   10  // Sample window for average level
+#define PEAK_HANG 24 //Time of pause before peak dot falls
+#define PEAK_FALL 4 //Rate of falling peak dot
+#define INPUT_FLOOR 10 //Lower range of analogRead input
+#define INPUT_CEILING 300 //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 
 /***********************************************************
@@ -26,16 +36,41 @@
 /***********************************************************
 *                      GLOBAL VARS                         *
 ***********************************************************/
-//global vars to go here
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_PIXELS, BL_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
+
+byte peak = 16;      // Peak level of column; used for falling dots
+unsigned int sample;
+byte dotCount = 0;  //Frame counter for peak dot
+byte dotHangCount = 0; //Frame counter for holding peak dot
+
 
 /***********************************************************
 *                          SETUP                           *
 ***********************************************************/
 void setup(){
-  //stuff and foo
+    //stuff and foo
   //pin defines
   //initial states
+  pinMode(REMOTE_ON, INPUT);
+  pinMode(REMOTE_OFF, INPUT); 
+  pinMode(AUDIO_IN, INPUT); 
+  pinMode(REMOTE_ON, INPUT); 
+  pinMode(FANS_CONTROL, OUTPUT); 
+  pinMode(FAN_1_LED, OUTPUT); 
+  pinMode(FAN_2_LED, OUTPUT); 
+  pinMode(FAN_3_LED, OUTPUT);
+  pinMode(FAN_4_LED, OUTPUT);
+  pinMode(BL_NEOPIXEL_S, OUTPUT);
+  pinMode(BR_NEOPIXEL_S, OUTPUT);
+  pinMode(FL_NEOPIXEL_S, OUTPUT);
+  pinMode(FR_NEOPIXEL_S, OUTPUT);
+  pinMode(COMPUTER_PWR, INPUT);
   
+  Serial.begin(9600);
+  //neopixel init
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+ 
 }
 
 
@@ -46,8 +81,9 @@ void setup(){
 void loop(){
   //stuff and foo
   //Read state of remote control pins
+  //Starup in normal/off mode
   //State machine to determine if starting up, shutting down, VU Meter, Attract Loop
-}  
+  }  
 void startUp(){
   //Do some fancy power on animation here
   //Enable the computer's power on button
@@ -60,45 +96,6 @@ void shutDown(){
 
 void vuMeter(){
  // Code below is from adafruit amplitie. use parts as needed in other code. Be sure to credit original source.  
-  /*
-#include <Adafruit_NeoPixel.h>
-#include <math.h>
- 
-#define N_PIXELS  16  // Number of pixels in strand
-#define MIC_PIN   A9  // Microphone is attached to this analog pin
-#define LED_PIN    6  // NeoPixel LED strand is connected to this pin
-#define SAMPLE_WINDOW   10  // Sample window for average level
-#define PEAK_HANG 24 //Time of pause before peak dot falls
-#define PEAK_FALL 4 //Rate of falling peak dot
-#define INPUT_FLOOR 10 //Lower range of analogRead input
-#define INPUT_CEILING 300 //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
- 
- 
- 
-byte peak = 16;      // Peak level of column; used for falling dots
-unsigned int sample;
- 
-byte dotCount = 0;  //Frame counter for peak dot
-byte dotHangCount = 0; //Frame counter for holding peak dot
- 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
- 
-void setup() 
-{
-  // This is only needed on 5V Arduinos (Uno, Leonardo, etc.).
-  // Connect 3.3V to mic AND TO AREF ON ARDUINO and enable this
-  // line.  Audio samples are 'cleaner' at 3.3V.
-  // COMMENT OUT THIS LINE FOR 3.3V ARDUINOS (FLORA, ETC.):
-  //  analogReference(EXTERNAL);
- 
-  // Serial.begin(9600);
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
- 
-}
- 
-void loop() 
-{
   unsigned long startMillis= millis();  // Start of sample window
   float peakToPeak = 0;   // peak-to-peak level
  
@@ -110,7 +107,7 @@ void loop()
   // collect data for length of sample window (in mS)
   while (millis() - startMillis < SAMPLE_WINDOW)
   {
-    sample = analogRead(MIC_PIN);
+    sample = analogRead(AUDIO_IN);
     if (sample < 1024)  // toss out spurious readings
     {
       if (sample > signalMax)
@@ -201,11 +198,11 @@ newEnd, float inputValue, float curve){
   curve = (curve * -.1) ; // - invert and scale - this seems more intuitive - postive numbers give more weight to high end on output 
   curve = pow(10, curve); // convert linear scale into lograthimic exponent for other pow function
  
-  /*
+
    Serial.println(curve * 100, DEC);   // multply by 100 to preserve resolution  
    Serial.println(); 
-   */
- /*
+
+
   // Check for out of range inputValues
   if (inputValue < originalMin) {
     inputValue = originalMin;
@@ -262,9 +259,8 @@ uint32_t Wheel(byte WheelPos) {
     return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
-*/
+
   //respond to audio input and make VU meters with the neopixel strips
-}
 
 void attract(){
   // do some fancy rainbow flashy thingys to make it more attractive
