@@ -1,30 +1,30 @@
-
+ 
 /***********************************************************
 *                         DEFINES                          *
 ***********************************************************/
 //Pin Defines
-#define BL_NEOPIXEL_S  12
-#define BR_NEOPIXEL_S  11
-#define FL_NEOPIXEL_S  10
-#define FR_NEOPIXEL_S  9
-#define FAN_1_LED      8
-#define FAN_2_LED      7
-#define FAN_3_LED      6
-#define FAN_4_LED      5
-#define FANS_CONTROL   4 
-#define AUDIO_IN       A0
-#define REMOTE_ON      3
-#define REMOTE_OFF     2
-#define COMPUTER_PWR   A1
+#define BL_NEOPIXEL_S      9
+#define BR_NEOPIXEL_S      6
+#define MON_NEOPIXEL_S     5
+#define SPARE_NEOPIXEL_S   3
+
+#define AMP_SLEEP          12
+#define FANS_CONTROL       11
+#define AUDIO_IN           A0
+#define REMOTEIN_ON        3
+#define REMOTEIN_OFF       2
+#define COMPUTER_PWR       A1
+#define COMPUTER_SENSE     A2
 
 //MagicNumber Defines
-#define N_PIXELS  16  // Number of pixels in strand
-//#define LED_PIN    6  // NeoPixel LED strand is connected to this pin // ( see above for LED strands)
+#define N_PIXELS_BACK  16        // Number of pixels in strand
+#define N_PIXELS_MON  16        // Number of pixels in strand
+#define N_PIXELS_SPARE  16        // Number of pixels in strand
 #define SAMPLE_WINDOW   10  // Sample window for average level
-#define PEAK_HANG 24 //Time of pause before peak dot falls
-#define PEAK_FALL 4 //Rate of falling peak dot
-#define INPUT_FLOOR 10 //Lower range of analogRead input
-#define INPUT_CEILING 300 //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
+#define PEAK_HANG 24        //Time of pause before peak dot falls
+#define PEAK_FALL 4         //Rate of falling peak dot
+#define INPUT_FLOOR 10      //Lower range of analogRead input
+#define INPUT_CEILING 300   //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 
 /***********************************************************
@@ -36,13 +36,19 @@
 /***********************************************************
 *                      GLOBAL VARS                         *
 ***********************************************************/
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_PIXELS, BL_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel bl_strip = Adafruit_NeoPixel(N_PIXELS_BACK, BL_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel br_strip = Adafruit_NeoPixel(N_PIXELS_BACK, BR_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel mon_strip = Adafruit_NeoPixel(N_PIXELS_MON, MON_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel spare_strip = Adafruit_NeoPixel(N_PIXELS_SPARE, SPARE_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 
 byte peak = 16;      // Peak level of column; used for falling dots
 unsigned int sample;
 byte dotCount = 0;  //Frame counter for peak dot
 byte dotHangCount = 0; //Frame counter for holding peak dot
 
+boolean  remoteBtnA_state = 0;
+boolean  remoteBtnD_state = 0;
+boolean  compState        = 0;
 
 /***********************************************************
 *                          SETUP                           *
@@ -51,25 +57,29 @@ void setup(){
     //stuff and foo
   //pin defines
   //initial states
-  pinMode(REMOTE_ON, INPUT);
-  pinMode(REMOTE_OFF, INPUT); 
+  pinMode(REMOTEIN_ON, INPUT);
+  pinMode(REMOTEIN_OFF, INPUT); 
   pinMode(AUDIO_IN, INPUT); 
-  pinMode(REMOTE_ON, INPUT); 
   pinMode(FANS_CONTROL, OUTPUT); 
-  pinMode(FAN_1_LED, OUTPUT); 
-  pinMode(FAN_2_LED, OUTPUT); 
-  pinMode(FAN_3_LED, OUTPUT);
-  pinMode(FAN_4_LED, OUTPUT);
+  pinMode(AMP_SLEEP, OUTPUT); 
   pinMode(BL_NEOPIXEL_S, OUTPUT);
   pinMode(BR_NEOPIXEL_S, OUTPUT);
-  pinMode(FL_NEOPIXEL_S, OUTPUT);
-  pinMode(FR_NEOPIXEL_S, OUTPUT);
-  pinMode(COMPUTER_PWR, INPUT);
+  pinMode(MON_NEOPIXEL_S, OUTPUT);
+  pinMode(SPARE_NEOPIXEL_S, OUTPUT);
+  pinMode(COMPUTER_PWR, INPUT_PULLUP);
+  pinMode(COMPUTER_SENSE, INPUT);
   
   Serial.begin(9600);
   //neopixel init
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  bl_strip.begin();
+  br_strip.begin();
+  mon_strip.begin();
+  spare_strip.begin();
+  //Initialize all pixels to OFF
+  bl_strip.show();
+  br_strip.show();
+  mon_strip.show();
+  spare_strip.show();
  
 }
 
@@ -79,19 +89,50 @@ void setup(){
 ***********************************************************/
 
 void loop(){
+  readRemoteButtonStates();
+  if (remoteBtnA_state) {
+      startUp;
+  }
+  if (remoteBtnD_state){
+      shutDown;
+  }
+  
   //stuff and foo
   //Read state of remote control pins
   //Starup in normal/off mode
   //State machine to determine if starting up, shutting down, VU Meter, Attract Loop
+
   }  
 void startUp(){
-  //Do some fancy power on animation here
-  //Enable the computer's power on button
+    //Do some fancy power on animation here
+    //Enable the computer's power on button
+  digitalWrite(FANS_CONTROL, HIGH);
+  digitalWrite(AMP_SLEEP, LOW);
+  
+
+
 }
 
 void shutDown(){
   //do some fancy power off animation here
   //pull the power button high again momentarily
+  digitalWrite(FANS_CONTROL, LOW);
+  digitalWrite(AMP_SLEEP, HIGH);
+  
+  bl_strip.show();
+  br_strip.show();
+  mon_strip.show();
+  spare_strip.show();
+  
+}
+
+void readRemoteButtonStates(){
+  remoteBtnA_state = digitalRead(REMOTEIN_ON);
+  remoteBtnD_state = digitalRead(REMOTEIN_OFF);
+}
+
+void readComputerPowerStates(){
+  compState = digitalRead(COMPUTER_SENSE);
 }
 
 void vuMeter(){
@@ -126,13 +167,13 @@ void vuMeter(){
  
  
   //Fill the strip with rainbow gradient
-  for (int i=0;i<=strip.numPixels()-1;i++){
-    strip.setPixelColor(i,Wheel(map(i,0,strip.numPixels()-1,30,150)));
+  for (int i=0;i<=bl_strip.numPixels()-1;i++){
+    bl_strip.setPixelColor(i,Wheel(map(i,0,bl_strip.numPixels()-1,30,150)));
   }
  
  
   //Scale the input logarithmically instead of linearly
-  c = fscale(INPUT_FLOOR, INPUT_CEILING, strip.numPixels(), 0, peakToPeak, 2);
+  c = fscale(INPUT_FLOOR, INPUT_CEILING, bl_strip.numPixels(), 0, peakToPeak, 2);
  
   
  
@@ -141,16 +182,16 @@ void vuMeter(){
     peak = c;        // Keep dot on top
     dotHangCount = 0;    // make the dot hang before falling
   }
-  if (c <= strip.numPixels()) { // Fill partial column with off pixels
-    drawLine(strip.numPixels(), strip.numPixels()-c, strip.Color(0, 0, 0));
+  if (c <= bl_strip.numPixels()) { // Fill partial column with off pixels
+    drawLine(bl_strip.numPixels(), bl_strip.numPixels()-c, bl_strip.Color(0, 0, 0));
   }
  
   // Set the peak dot to match the rainbow gradient
-  y = strip.numPixels() - peak;
+  y = bl_strip.numPixels() - peak;
   
-  strip.setPixelColor(y-1,Wheel(map(y,0,strip.numPixels()-1,30,150)));
+  bl_strip.setPixelColor(y-1,Wheel(map(y,0,bl_strip.numPixels()-1,30,150)));
  
-  strip.show();
+  bl_strip.show();
  
   // Frame based peak dot animation
   if(dotHangCount > PEAK_HANG) { //Peak pause length
@@ -173,7 +214,7 @@ void drawLine(uint8_t from, uint8_t to, uint32_t c) {
     to = fromTemp;
   }
   for(int i=from; i<=to; i++){
-    strip.setPixelColor(i, c);
+    bl_strip.setPixelColor(i, c);
   }
 }
  
@@ -248,15 +289,15 @@ newEnd, float inputValue, float curve){
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
   if(WheelPos < 85) {
-    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+    return bl_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   } 
   else if(WheelPos < 170) {
     WheelPos -= 85;
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return bl_strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   } 
   else {
     WheelPos -= 170;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return bl_strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
 
