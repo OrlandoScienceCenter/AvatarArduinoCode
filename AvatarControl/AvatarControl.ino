@@ -108,6 +108,7 @@ void startUp(){
     //Enable the computer's power on button
   digitalWrite(FANS_CONTROL, HIGH);
   digitalWrite(AMP_SLEEP, LOW);
+  turnOnComputer();
   
 
 
@@ -134,6 +135,30 @@ void readRemoteButtonStates(){
 void readComputerPowerStates(){
   compState = digitalRead(COMPUTER_SENSE);
 }
+
+void turnOnComputer(){
+  if (!compState) {
+    pinMode (COMPUTER_PWR, OUTPUT);
+    digitalWrite(COMPUTER_PWR, LOW);
+  }
+ delay(100);
+  if (!compState) {
+     pinMode(COMPUTER_PWR, INPUT);
+  }
+}
+void turnOffComputer(){
+  if (compState) {
+    pinMode (COMPUTER_PWR, OUTPUT);
+    digitalWrite(COMPUTER_PWR, LOW);
+  }
+ delay(100);
+  if (compState) {
+     pinMode(COMPUTER_PWR, INPUT);
+  }
+}
+
+
+
 
 void vuMeter(){
  // Code below is from adafruit amplitie. use parts as needed in other code. Be sure to credit original source.  
