@@ -18,12 +18,12 @@
 
 //MagicNumber Defines
 #define N_PIXELS_BACK 58       // Number of pixels in strand
-#define N_PIXELS_MON 30        // Number of pixels in strand
+#define N_PIXELS_MON 35        // Number of pixels in strand
 #define N_PIXELS_SPARE 30        // Number of pixels in strand
 #define SAMPLE_WINDOW 30  // Sample window for average level
 #define PEAK_HANG 1       //Time of pause before peak dot falls
 #define PEAK_FALL 1         //Rateof falling peak dot
-#define INPUT_FLOOR 8      //Lower range of analogRead input
+#define INPUT_FLOOR 9      //Lower range of analogRead input
 #define INPUT_CEILING 100   //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 
@@ -50,7 +50,8 @@ boolean  remoteBtnA_state = 0;
 boolean  remoteBtnD_state = 0;
 boolean  compState        = 0;
 int      rawAudioVal      = 0;
-int      speakDelayCount  = 0;
+int      speakDelayCount  = 0; // 
+boolean  systemState      = 0; //  checks to see if the system should be on/off for the lights 
 /***********************************************************
 *                          SETUP                           *
 ***********************************************************/
@@ -109,19 +110,21 @@ void loop(){
  // Serial.println(val);
    vuMeter();
    
-if (peak > 56){
+if (peak > 56 && systemState){
   speakDelayCount++;
   Serial.println(speakDelayCount);
   delay(1);
   }
 if (peak < 50){
   speakDelayCount = 0;
+  moboLightsWhite();
   delay (1);
   }  
 if (speakDelayCount > 350){
   Serial.println("I'm not speaking. time to engage the attract loop");
+  moboLightsBlue();
   attract();
-  delay(5);
+  delay(2);
   }  
 }
 
@@ -140,7 +143,8 @@ void startUp(){
   digitalWrite(13, HIGH);
   delay(5000);
   digitalWrite(13, LOW);
-  
+  systemState = 1;
+  moboLightsWhite();
 
 
 }
@@ -159,11 +163,15 @@ void shutDown(){
   br_strip.show();
   mon_strip.show();
   spare_strip.show();
+  
   // Activates the onboard LED to show that the system is busy. 
   // also pauses for 5 seconds to make sure there are not repeat remote commands sent
   digitalWrite(13, HIGH);
   delay(5000);
   digitalWrite(13, LOW);
+  systemState = 0;
+  speakDelayCount = 0;
+  moboLightsOff();
 }
 
 void readRemoteButtonStates(){
@@ -391,15 +399,12 @@ uint32_t Wheel(byte WheelPos) {
   //respond to audio input and make VU meters with the neopixel strips
 
 void attract(){
+  moboLightsBlue();
   Serial.print("attract loop");
-  uint32_t c;
-   c = (127, 127, 127);
-  for (int j=0; j<10; j++) {  //do 10 cycles of chasing
-      checkRawAudio();
       for (int q=0; q < 3; q++) {
         for (int i=0; i < bl_strip.numPixels(); i=i+3) {
-        bl_strip.setPixelColor(i+q, c);    //turn every third pixel on
-        br_strip.setPixelColor(i+q, c);    //turn every third pixel on
+        bl_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
+        br_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
       }
       bl_strip.show();
       br_strip.show();
@@ -408,10 +413,9 @@ void attract(){
       for (int i=0; i < bl_strip.numPixels(); i=i+3) {
         bl_strip.setPixelColor(i+q, 0);        //turn every third pixel off
         br_strip.setPixelColor(i+q, 0);        //turn every third pixel off
-
-      }
     }
   }
+loop();
 }
   // do some fancy rainbow flashy thingys to make it more attractive
 
@@ -427,4 +431,42 @@ void checkRawAudio(){ // Pseudo interrupt to get more quickly back to VU meter
        br_strip.show(); 
        loop(); 
       }  
+}
+
+void moboLightsRed(){
+uint32_t red = mon_strip.Color(255,0,0);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, red);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+  
+  
+void moboLightsWhite(){
+uint32_t fullWhite = mon_strip.Color(255,255,255);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, fullWhite);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+
+
+void moboLightsBlue(){
+uint32_t blue = mon_strip.Color(0,0,255);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, blue);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+
+void moboLightsOff(){
+uint32_t off = mon_strip.Color(0,0,0);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, off);   
+        mon_strip.setBrightness(0);
+        }
+        mon_strip.show();
 }
