@@ -3,28 +3,28 @@
 *                         DEFINES                          *
 ***********************************************************/
 //Pin Defines
-#define BL_NEOPIXEL_S 9
-#define BR_NEOPIXEL_S 6
-#define MON_NEOPIXEL_S 5
-#define SPARE_NEOPIXEL_S 3
+#define BL_NEOPIXEL_S      9
+#define BR_NEOPIXEL_S      6
+#define MON_NEOPIXEL_S     5
+#define SPARE_NEOPIXEL_S   3
 
-#define AMP_SLEEP 4
-#define FANS_CONTROL 2
-#define AUDIO_IN A0
-#define REMOTEIN_ON 10
-#define REMOTEIN_OFF 11
-#define COMPUTER_PWR A2
-#define COMPUTER_SENSE A3
+#define AMP_SLEEP          12
+#define FANS_CONTROL       11
+#define AUDIO_IN           A0
+#define REMOTEIN_ON        3
+#define REMOTEIN_OFF       2
+#define COMPUTER_PWR       A1
+#define COMPUTER_SENSE     A2
 
 //MagicNumber Defines
-#define N_PIXELS_BACK 58       // Number of pixels in strand
-#define N_PIXELS_MON 35        // Number of pixels in strand
-#define N_PIXELS_SPARE 30        // Number of pixels in strand
-#define SAMPLE_WINDOW 30  // Sample window for average level
-#define PEAK_HANG 1       //Time of pause before peak dot falls
-#define PEAK_FALL 1         //Rateof falling peak dot
-#define INPUT_FLOOR 9      //Lower range of analogRead input
-#define INPUT_CEILING 100   //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
+#define N_PIXELS_BACK  16        // Number of pixels in strand
+#define N_PIXELS_MON  16        // Number of pixels in strand
+#define N_PIXELS_SPARE  16        // Number of pixels in strand
+#define SAMPLE_WINDOW   10  // Sample window for average level
+#define PEAK_HANG 24        //Time of pause before peak dot falls
+#define PEAK_FALL 4         //Rate of falling peak dot
+#define INPUT_FLOOR 10      //Lower range of analogRead input
+#define INPUT_CEILING 300   //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 
 /***********************************************************
@@ -49,9 +49,7 @@ byte dotHangCount = 0; //Frame counter for holding peak dot
 boolean  remoteBtnA_state = 0;
 boolean  remoteBtnD_state = 0;
 boolean  compState        = 0;
-int      rawAudioVal      = 0;
-int      speakDelayCount  = 0; // 
-boolean  systemState      = 0; //  checks to see if the system should be on/off for the lights 
+
 /***********************************************************
 *                          SETUP                           *
 ***********************************************************/
@@ -83,7 +81,6 @@ void setup(){
   mon_strip.show();
   spare_strip.show();
  
- startUp();
 }
 
 
@@ -94,57 +91,25 @@ void setup(){
 void loop(){
   readRemoteButtonStates();
   if (remoteBtnA_state) {
-    Serial.println("Remote Button A Detected");
-      startUp();
+      startUp;
   }
   if (remoteBtnD_state){
-    Serial.println("Remote Button D Detected");
-      shutDown();
+      shutDown;
   }
   
   //stuff and foo
   //Read state of remote control pins
   //Starup in normal/off mode
   //State machine to determine if starting up, shutting down, VU Meter, Attract Loop
-  int val = analogRead(A0);
- // Serial.println(val);
-   vuMeter();
-   
-if (peak > 56 && systemState){
-  speakDelayCount++;
-  Serial.println(speakDelayCount);
-  delay(1);
-  }
-if (peak < 50){
-  speakDelayCount = 0;
-  moboLightsWhite();
-  delay (1);
+
   }  
-if (speakDelayCount > 350){
-  Serial.println("I'm not speaking. time to engage the attract loop");
-  moboLightsBlue();
-  attract();
-  delay(2);
-  }  
-}
-
-
-
 void startUp(){
     //Do some fancy power on animation here
     //Enable the computer's power on button
-  Serial.println("Startup sequence started");
-  digitalWrite(FANS_CONTROL, HIGH); // Turns on the clear case fans (red light)
-  digitalWrite(AMP_SLEEP, LOW); // Takes the amplifier out of sleep state
+  digitalWrite(FANS_CONTROL, HIGH);
+  digitalWrite(AMP_SLEEP, LOW);
+  turnOnComputer();
   
-  turnOnComputer(); // Turns on the computer
-  // Activates the onboard LED to show that the system is busy. 
-  // also pauses for 5 seconds to make sure there are not repeat remote commands sent
-  digitalWrite(13, HIGH);
-  delay(5000);
-  digitalWrite(13, LOW);
-  systemState = 1;
-  moboLightsWhite();
 
 
 }
@@ -152,36 +117,17 @@ void startUp(){
 void shutDown(){
   //do some fancy power off animation here
   //pull the power button high again momentarily
-<<<<<<< HEAD
   digitalWrite(FANS_CONTROL, LOW);
   digitalWrite(AMP_SLEEP, HIGH);
-  turnOffComputer();
-=======
-  Serial.println("Shutdown sequence started");
   
-  digitalWrite(FANS_CONTROL, LOW); // Turns off the clear case fans(red)
-  digitalWrite(AMP_SLEEP, HIGH); // Mutes and sleeps the audio amplifier
-  turnOffComputer(); // Turns computer off
-
-  // Initialize all lighting strips to off
->>>>>>> origin/master
   bl_strip.show();
   br_strip.show();
   mon_strip.show();
   spare_strip.show();
   
-  // Activates the onboard LED to show that the system is busy. 
-  // also pauses for 5 seconds to make sure there are not repeat remote commands sent
-  digitalWrite(13, HIGH);
-  delay(5000);
-  digitalWrite(13, LOW);
-  systemState = 0;
-  speakDelayCount = 0;
-  moboLightsOff();
 }
 
 void readRemoteButtonStates(){
-
   remoteBtnA_state = digitalRead(REMOTEIN_ON);
   remoteBtnD_state = digitalRead(REMOTEIN_OFF);
 }
@@ -191,9 +137,6 @@ void readComputerPowerStates(){
 }
 
 void turnOnComputer(){
-  readComputerPowerStates();
-  Serial.print("turn on computer - state = ");
-  Serial.println(compState);
   if (!compState) {
     pinMode (COMPUTER_PWR, OUTPUT);
     digitalWrite(COMPUTER_PWR, LOW);
@@ -202,14 +145,8 @@ void turnOnComputer(){
   if (!compState) {
      pinMode(COMPUTER_PWR, INPUT);
   }
-Serial.println("computer should be on now");
 }
-
-
 void turnOffComputer(){
-  readComputerPowerStates();
-    Serial.print("turn off computer - state = ");
-  Serial.println(compState);
   if (compState) {
     pinMode (COMPUTER_PWR, OUTPUT);
     digitalWrite(COMPUTER_PWR, LOW);
@@ -218,7 +155,6 @@ void turnOffComputer(){
   if (compState) {
      pinMode(COMPUTER_PWR, INPUT);
   }
-Serial.println("computer should be off now");
 }
 
 
@@ -258,7 +194,6 @@ void vuMeter(){
   //Fill the strip with rainbow gradient
   for (int i=0;i<=bl_strip.numPixels()-1;i++){
     bl_strip.setPixelColor(i,Wheel(map(i,0,bl_strip.numPixels()-1,30,150)));
-    br_strip.setPixelColor(i,Wheel(map(i,0,bl_strip.numPixels()-1,30,150)));
   }
  
  
@@ -274,18 +209,14 @@ void vuMeter(){
   }
   if (c <= bl_strip.numPixels()) { // Fill partial column with off pixels
     drawLine(bl_strip.numPixels(), bl_strip.numPixels()-c, bl_strip.Color(0, 0, 0));
-    drawLine(br_strip.numPixels(), br_strip.numPixels()-c, br_strip.Color(0, 0, 0));
   }
  
   // Set the peak dot to match the rainbow gradient
   y = bl_strip.numPixels() - peak;
-  y = br_strip.numPixels() - peak;
   
   bl_strip.setPixelColor(y-1,Wheel(map(y,0,bl_strip.numPixels()-1,30,150)));
-  br_strip.setPixelColor(y-1,Wheel(map(y,0,br_strip.numPixels()-1,30,150)));
-  
+ 
   bl_strip.show();
-  br_strip.show();
  
   // Frame based peak dot animation
   if(dotHangCount > PEAK_HANG) { //Peak pause length
@@ -297,11 +228,8 @@ void vuMeter(){
   else {
     dotHangCount++; 
   }
-//Serial.println(peak);
 }
-
-
-
+ 
 //Used to draw a line between two points of a given color
 void drawLine(uint8_t from, uint8_t to, uint32_t c) {
   uint8_t fromTemp;
@@ -312,7 +240,6 @@ void drawLine(uint8_t from, uint8_t to, uint32_t c) {
   }
   for(int i=from; i<=to; i++){
     bl_strip.setPixelColor(i, c);
-    br_strip.setPixelColor(i, c);
   }
 }
  
@@ -338,8 +265,8 @@ newEnd, float inputValue, float curve){
   curve = pow(10, curve); // convert linear scale into lograthimic exponent for other pow function
  
 
-  // Serial.println(curve * 100, DEC);   // multply by 100 to preserve resolution  
-   //Serial.println(); 
+   Serial.println(curve * 100, DEC);   // multply by 100 to preserve resolution  
+   Serial.println(); 
 
 
   // Check for out of range inputValues
@@ -388,91 +315,22 @@ newEnd, float inputValue, float curve){
 uint32_t Wheel(byte WheelPos) {
   if(WheelPos < 85) {
     return bl_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-    return br_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   } 
   else if(WheelPos < 170) {
     WheelPos -= 85;
     return bl_strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-    return br_strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   } 
   else {
     WheelPos -= 170;
     return bl_strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-    return br_strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
 
   //respond to audio input and make VU meters with the neopixel strips
 
 void attract(){
-  moboLightsBlue();
-  Serial.print("attract loop");
-      for (int q=0; q < 3; q++) {
-        for (int i=0; i < bl_strip.numPixels(); i=i+3) {
-        bl_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
-        br_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
-      }
-      bl_strip.show();
-      br_strip.show();
-      delay(50);
-     
-      for (int i=0; i < bl_strip.numPixels(); i=i+3) {
-        bl_strip.setPixelColor(i+q, 0);        //turn every third pixel off
-        br_strip.setPixelColor(i+q, 0);        //turn every third pixel off
-    }
-  }
-loop();
-}
   // do some fancy rainbow flashy thingys to make it more attractive
-
-void checkRawAudio(){ // Pseudo interrupt to get more quickly back to VU meter
-      rawAudioVal = analogRead(AUDIO_IN);
-      Serial.println(rawAudioVal);
-      if (rawAudioVal < 510){
-        for (int i=0; i < bl_strip.numPixels(); i++) {
-          bl_strip.setPixelColor(i, 0);    //turn every third pixel on
-          br_strip.setPixelColor(i, 0);    //turn every third pixel on       
-        }
-       bl_strip.show();
-       br_strip.show(); 
-       loop(); 
-      }  
-}
-
-void moboLightsRed(){
-uint32_t red = mon_strip.Color(255,0,0);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, red);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
+  
 }
   
-  
-void moboLightsWhite(){
-uint32_t fullWhite = mon_strip.Color(255,255,255);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, fullWhite);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
-}
-
-
-void moboLightsBlue(){
-uint32_t blue = mon_strip.Color(0,0,255);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, blue);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
-}
-
-void moboLightsOff(){
-uint32_t off = mon_strip.Color(0,0,0);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, off);   
-        mon_strip.setBrightness(0);
-        }
-        mon_strip.show();
-}
+ 
