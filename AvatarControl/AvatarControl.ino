@@ -3,13 +3,13 @@
 *                         DEFINES                          *
 ***********************************************************/
 //Pin Defines
-#define BL_NEOPIXEL_S       9        // Back left neopixel strip data pin
-#define BR_NEOPIXEL_S       6        // Back right neopixel strip data pin
-#define MON_NEOPIXEL_S      5        // Monitor attached neopixel strip data pin
-#define SPARE_NEOPIXEL_S    3        // Spare neopixel pin - (NOT USED)
+#define BL_NEOPIXEL_S        9       // Back left neopixel strip data pin
+#define BR_NEOPIXEL_S        6       // Back right neopixel strip data pin
+#define MON_NEOPIXEL_S       5       // Monitor attached neopixel strip data pin
+#define SPARE_NEOPIXEL_S     3       // Spare neopixel pin - (NOT USED)
 
-#define AMP_SLEEP           4        // Logic control pin for sleep of Audio Amplifier
-#define FANS_CONTROL        2        // Fan Control pin - N-Channel Mosfet control (Fairchild FQP20N06)
+#define AMP_SLEEP            4       // Logic control pin for sleep of Audio Amplifier
+#define FANS_CONTROL         2       // Fan Control pin - N-Channel Mosfet control (Fairchild FQP20N06)
 #define AUDIO_IN            A0       // Audio input sampling pin. Used with voltage divider/offset
 #define REMOTEIN_ON         10       // RF Remote input -  Pin D3(A) from RF - ON control
 #define REMOTEIN_OFF        11       // RF Remote input -  Pin D0(D) from RF - OFF control
@@ -24,7 +24,7 @@
 #define PEAK_HANG            1       //Time of pause before peak dot falls
 #define PEAK_FALL            1       //Rateof falling peak dot
 #define INPUT_FLOOR          9       //Lower range of analogRead input
-#define INPUT_CEILING        100     //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
+#define INPUT_CEILING      100       //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 /***********************************************************
 *                         INCLUDES                         *
@@ -41,10 +41,10 @@ Adafruit_NeoPixel br_strip = Adafruit_NeoPixel(N_PIXELS_BACK, BR_NEOPIXEL_S, NEO
 Adafruit_NeoPixel mon_strip = Adafruit_NeoPixel(N_PIXELS_MON, MON_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel spare_strip = Adafruit_NeoPixel(N_PIXELS_SPARE, SPARE_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 
-byte peak = 16;                      // Peak level of column; used for falling dots
 unsigned int sample;                 // Integer value setup for sample var
-byte dotCount = 0;                   // Frame counter for peak dot
-byte dotHangCount = 0;               // Frame counter for holding peak dot
+byte peak                 = 16;      // Peak level of column; used for falling dots
+byte dotCount             = 0;       // Frame counter for peak dot
+byte dotHangCount         = 0;       // Frame counter for holding peak dot
 
 boolean  remoteBtnA_state = 0;       // Init variables and Set initial button states
 boolean  remoteBtnD_state = 0;       // Init variables and Set initial button states
