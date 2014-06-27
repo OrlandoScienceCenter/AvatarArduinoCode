@@ -3,29 +3,28 @@
 *                         DEFINES                          *
 ***********************************************************/
 //Pin Defines
-#define BL_NEOPIXEL_S 9
-#define BR_NEOPIXEL_S 6
-#define MON_NEOPIXEL_S 5
-#define SPARE_NEOPIXEL_S 3
+#define BL_NEOPIXEL_S       9        // Back left neopixel strip data pin
+#define BR_NEOPIXEL_S       6        // Back right neopixel strip data pin
+#define MON_NEOPIXEL_S      5        // Monitor attached neopixel strip data pin
+#define SPARE_NEOPIXEL_S    3        // Spare neopixel pin - (NOT USED)
 
-#define AMP_SLEEP 4
-#define FANS_CONTROL 2
-#define AUDIO_IN A0
-#define REMOTEIN_ON 10
-#define REMOTEIN_OFF 11
-#define COMPUTER_PWR A2
-#define COMPUTER_SENSE A3
+#define AMP_SLEEP           4        // Logic control pin for sleep of Audio Amplifier
+#define FANS_CONTROL        2        // Fan Control pin - N-Channel Mosfet control (Fairchild FQP20N06)
+#define AUDIO_IN            A0       // Audio input sampling pin. Used with voltage divider/offset
+#define REMOTEIN_ON         10       // RF Remote input -  Pin D3(A) from RF - ON control
+#define REMOTEIN_OFF        11       // RF Remote input -  Pin D0(D) from RF - OFF control
+#define COMPUTER_PWR        A2       // Computer power button pin - ground for press
+#define COMPUTER_SENSE      A3       // Computer power LED pin - tied to +5v of computer PWR LED pin
 
 //MagicNumber Defines
-#define N_PIXELS_BACK 58       // Number of pixels in strand
-#define N_PIXELS_MON 35        // Number of pixels in strand
-#define N_PIXELS_SPARE 30        // Number of pixels in strand
-#define SAMPLE_WINDOW 30  // Sample window for average level
-#define PEAK_HANG 1       //Time of pause before peak dot falls
-#define PEAK_FALL 1         //Rateof falling peak dot
-#define INPUT_FLOOR 9      //Lower range of analogRead input
-#define INPUT_CEILING 100   //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
-
+#define N_PIXELS_BACK       58       // Number of pixels in strand
+#define N_PIXELS_MON        35       // Number of pixels in strand
+#define N_PIXELS_SPARE      30       // Number of pixels in strand
+#define SAMPLE_WINDOW       30       // Sample window for average level
+#define PEAK_HANG            1       //Time of pause before peak dot falls
+#define PEAK_FALL            1       //Rateof falling peak dot
+#define INPUT_FLOOR          9       //Lower range of analogRead input
+#define INPUT_CEILING        100     //Max range of analogRead input, the lower the value the more sensitive (1023 = max)
 
 /***********************************************************
 *                         INCLUDES                         *
@@ -36,29 +35,29 @@
 /***********************************************************
 *                      GLOBAL VARS                         *
 ***********************************************************/
+// Define neopixel strip names
 Adafruit_NeoPixel bl_strip = Adafruit_NeoPixel(N_PIXELS_BACK, BL_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel br_strip = Adafruit_NeoPixel(N_PIXELS_BACK, BR_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel mon_strip = Adafruit_NeoPixel(N_PIXELS_MON, MON_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel spare_strip = Adafruit_NeoPixel(N_PIXELS_SPARE, SPARE_NEOPIXEL_S, NEO_GRB + NEO_KHZ800);
 
-byte peak = 16;      // Peak level of column; used for falling dots
-unsigned int sample;
-byte dotCount = 0;  //Frame counter for peak dot
-byte dotHangCount = 0; //Frame counter for holding peak dot
+byte peak = 16;                      // Peak level of column; used for falling dots
+unsigned int sample;                 // Integer value setup for sample var
+byte dotCount = 0;                   // Frame counter for peak dot
+byte dotHangCount = 0;               // Frame counter for holding peak dot
 
-boolean  remoteBtnA_state = 0;
-boolean  remoteBtnD_state = 0;
-boolean  compState        = 0;
-int      rawAudioVal      = 0;
-int      speakDelayCount  = 0; // 
-boolean  systemState      = 0; //  checks to see if the system should be on/off for the lights 
+boolean  remoteBtnA_state = 0;       // Init variables and Set initial button states
+boolean  remoteBtnD_state = 0;       // Init variables and Set initial button states
+boolean  compState        = 0;       // Set computer status to default as off
+int      rawAudioVal      = 0;       // Raw input from analog pin - possibly extraneous now 
+int      speakDelayCount  = 0;       // Counter for arbitrary time system is not speaking/playing audio
+boolean  systemState      = 0;       // Used to track system intended state for light control
+
 /***********************************************************
 *                          SETUP                           *
 ***********************************************************/
 void setup(){
-    //stuff and foo
-  //pin defines
-  //initial states
+  // Set all pin modes appropriately. See above defines for pin descriptions
   pinMode(REMOTEIN_ON, INPUT);
   pinMode(REMOTEIN_OFF, INPUT); 
   pinMode(AUDIO_IN, INPUT); 
@@ -71,92 +70,110 @@ void setup(){
   pinMode(COMPUTER_PWR, INPUT_PULLUP);
   pinMode(COMPUTER_SENSE, INPUT);
   
+  // Initialize serial for debug
   Serial.begin(9600);
-  //neopixel init
-  bl_strip.begin();
+  
+  // Initialize all neopixel strips             
+  bl_strip.begin();                
   br_strip.begin();
   mon_strip.begin();
   spare_strip.begin();
+  
   //Initialize all pixels to OFF
   bl_strip.show();
   br_strip.show();
   mon_strip.show();
   spare_strip.show();
- 
- startUp();
+  
+  // Run the startUp function before heading to the main loop
+  // ensure that the computer is initialized on a full power up 
+  startUp();
 }
-
 
 /***********************************************************
 *                          LOOP                            *
 ***********************************************************/
 
 void loop(){
-  readRemoteButtonStates();
-  if (remoteBtnA_state) {
+  readRemoteButtonStates();         // Function to read RF remote button states
+  
+  if (remoteBtnA_state) {           // If A button is being pressed
     Serial.println("Remote Button A Detected");
-      startUp();
+      startUp();                    // run the startUp function
   }
-  if (remoteBtnD_state){
+      
+  if (remoteBtnD_state){            // If D button is being pressed
     Serial.println("Remote Button D Detected");
-      shutDown();
+      shutDown();                   // run the shutDown function
   }
   
-  //stuff and foo
-  //Read state of remote control pins
-  //Starup in normal/off mode
-  //State machine to determine if starting up, shutting down, VU Meter, Attract Loop
-  int val = analogRead(A0);
- // Serial.println(val);
-   vuMeter();
-   
-if (peak > 56 && systemState){
-  speakDelayCount++;
-  Serial.println(speakDelayCount);
-  delay(1);
+   // Every loop, go to the code that writes to the neopixel strips like a VU meter
+   // This way, we can transition quickly from attract loop to VU meter display   
+   vuMeter();                        // run VU meter function - will do nothing if no audio is above threshold, but
+                                     // will check and report back the peak audio variable
+  
+  
+  // The following 3 IF statements control the attract loop and motherboard lighting. VU meters are seperately initiated
+  //
+  if (peak > 56 && systemState){     // checks the peak audio var to know if audio is present and intended system state
+    speakDelayCount++;               // if audio is below the threshold, add one to the speakDelayCount
+    Serial.println(speakDelayCount); // print the current delay counter
+    delay(1);                        // just a little delay so the program doesn't trip on itself
   }
-if (peak < 50){
-  speakDelayCount = 0;
-  moboLightsWhite();
-  delay (1);
+  
+  if (peak < 50){                    // check the peak audio var if < 50, then audio present
+    speakDelayCount = 0;             // reset the no audio timer/counter
+    moboLightsWhite();               // set the lights on the back of the monitor to white, to illuminate motherboard
+    delay (1);                   
+  }
+  
+  if (speakDelayCount > 350){        // If we've reached 350 program loops without an audio signal
+    Serial.println("I'm not speaking. time to engage the attract loop");
+    moboLightsBlue();                // Turn the motherboaard illumination to blue (sleep)
+    attract();                       // Send the program to the attract loop
+    delay(2);                        // delay for a little while to keep the program from tripping on itself
   }  
-if (speakDelayCount > 350){
-  Serial.println("I'm not speaking. time to engage the attract loop");
-  moboLightsBlue();
-  attract();
-  delay(2);
-  }  
-}
+}                                    // end of main loop
 
 
+/***********************************************************
+*                        startUp                           *
+***********************************************************/
 
-void startUp(){
-    //Do some fancy power on animation here
-    //Enable the computer's power on button
+void startUp(){                      // system start up sequence
+ 
   Serial.println("Startup sequence started");
-  digitalWrite(FANS_CONTROL, HIGH); // Turns on the clear case fans (red light)
-  digitalWrite(AMP_SLEEP, LOW); // Takes the amplifier out of sleep state
+    digitalWrite(FANS_CONTROL, HIGH); // Turns on the clear case fans (red light)
+    digitalWrite(AMP_SLEEP, LOW);     // Takes the amplifier out of sleep state
+ 
+  //Send the computer's power on button low
+  turnOnComputer();                   // function to turn on the computer
   
-  turnOnComputer(); // Turns on the computer
   // Activates the onboard LED to show that the system is busy. 
   // also pauses for 5 seconds to make sure there are not repeat remote commands sent
   digitalWrite(13, HIGH);
-  delay(5000);
+    delay(5000);
   digitalWrite(13, LOW);
-  systemState = 1;
-  moboLightsWhite();
+  
+  systemState = 1;                // Set the system state representation to on
+  moboLightsWhite();              // turn the motherboard lights to white after all has been completed
 
 
 }
 
+
+/***********************************************************
+*                       shutDown                           *
+***********************************************************/
+
 void shutDown(){
-  //do some fancy power off animation here
-  //pull the power button high again momentarily
+
   Serial.println("Shutdown sequence started");
-  
-  digitalWrite(FANS_CONTROL, LOW); // Turns off the clear case fans(red)
-  digitalWrite(AMP_SLEEP, HIGH); // Mutes and sleeps the audio amplifier
-  turnOffComputer(); // Turns computer off
+    digitalWrite(FANS_CONTROL, LOW); // Turns off the clear case fans(red)
+    digitalWrite(AMP_SLEEP, HIGH);   // Mutes and sleeps the audio amplifier
+ 
+  //Send the computer's power on button low
+  turnOffComputer();                 // function to turn computer off
 
   // Initialize all lighting strips to off
   bl_strip.show();
@@ -167,57 +184,172 @@ void shutDown(){
   // Activates the onboard LED to show that the system is busy. 
   // also pauses for 5 seconds to make sure there are not repeat remote commands sent
   digitalWrite(13, HIGH);
-  delay(5000);
+    moboLightsOff();
+    delay(5000);
   digitalWrite(13, LOW);
-  systemState = 0;
-  speakDelayCount = 0;
-  moboLightsOff();
+  
+  systemState = 0;                      // Set system state represenation to off
+  speakDelayCount = 0;                  // Reset the speaker delay count to 0 - this keeps system out of attract loop
+
 }
 
-void readRemoteButtonStates(){
 
+/***********************************************************
+*                 readRemoteButtonStates                   *
+***********************************************************/
+
+void readRemoteButtonStates(){
+  // Read both digitial inputs for the RF remote buttons and store as state
   remoteBtnA_state = digitalRead(REMOTEIN_ON);
   remoteBtnD_state = digitalRead(REMOTEIN_OFF);
 }
 
+
+/***********************************************************
+*                readComputerPowerStates                   *
+***********************************************************/
+
 void readComputerPowerStates(){
+  // Read the computer LED power on pin and store as computer state
   compState = digitalRead(COMPUTER_SENSE);
 }
 
+
+/* Power on and Power off code below was adapted from code written by 
+David Sikes for Orlando Science Center                       */
+
+/***********************************************************
+*                     turnOnComputer                       *
+***********************************************************/
+
 void turnOnComputer(){
   readComputerPowerStates();
+  
   Serial.print("turn on computer - state = ");
   Serial.println(compState);
-  if (!compState) {
-    pinMode (COMPUTER_PWR, OUTPUT);
-    digitalWrite(COMPUTER_PWR, LOW);
+  
+  if (!compState) {                     // If the computer is NOT on
+    pinMode (COMPUTER_PWR, OUTPUT);     // Set control pin to output
+    digitalWrite(COMPUTER_PWR, LOW);    // send the pin LOW (press btn to gnd) for 100 ms
   }
+ 
  delay(100);
-  if (!compState) {
-     pinMode(COMPUTER_PWR, INPUT);
-  }
-Serial.println("computer should be on now");
+ 
+ if (!compState) {                      // Sets the computer control pin to high-impedance
+   pinMode(COMPUTER_PWR, INPUT);        // so that the on-board button still works
+ }
+ 
+ Serial.println("computer should be on now");
 }
 
+
+/***********************************************************
+*                    turnOffComputer                       *
+***********************************************************/
 
 void turnOffComputer(){
   readComputerPowerStates();
-    Serial.print("turn off computer - state = ");
+ 
+  Serial.print("turn off computer - state = ");
   Serial.println(compState);
-  if (compState) {
-    pinMode (COMPUTER_PWR, OUTPUT);
-    digitalWrite(COMPUTER_PWR, LOW);
+ 
+  if (compState) {                        // If the computer is ON
+    pinMode (COMPUTER_PWR, OUTPUT);       // set the control pin mode to OUTPUT
+    digitalWrite(COMPUTER_PWR, LOW);      // Send the pin LOW (press ptn to gnd) for 100ms
   }
- delay(100);
-  if (compState) {
-     pinMode(COMPUTER_PWR, INPUT);
-  }
-Serial.println("computer should be off now");
+  
+ delay(100);                    
+ 
+ if (compState) {                         // Sets the computer control pin to high-impedance 
+   pinMode(COMPUTER_PWR, INPUT);          // so that the on-board button still works
+ }
+
+  Serial.println("computer should be off now");
 }
 
 
+/***********************************************************
+*                         attract                          *
+***********************************************************/
+
+void attract(){
+  moboLightsBlue();                              // send the motherboard illumination back to blue (sleep)
+  Serial.print("attract loop");
+      for (int q=0; q < 3; q++) {                // Chase flash, adapted from adafruit neopixel test code
+        for (int i=0; i < bl_strip.numPixels(); i=i+3) {
+        bl_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
+        br_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
+      }
+      bl_strip.show();                           // send color/pixel information out to neopixel strips
+      br_strip.show();
+      delay(50);
+     
+      for (int i=0; i < bl_strip.numPixels(); i=i+3) {
+        bl_strip.setPixelColor(i+q, 0);          //turn every third pixel off
+        br_strip.setPixelColor(i+q, 0);          //turn every third pixel off
+    }
+  }
+}
+
+/***********************************************************
+*                moboLights Color functions                *
+***********************************************************/
+
+void moboLightsRed(){
+uint32_t red = mon_strip.Color(255,0,0);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, red);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+  
+  
+void moboLightsWhite(){
+uint32_t fullWhite = mon_strip.Color(255,255,255);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, fullWhite);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
 
 
+void moboLightsBlue(){
+uint32_t blue = mon_strip.Color(0,0,255);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, blue);   
+        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+
+void moboLightsOff(){
+uint32_t off = mon_strip.Color(0,0,0);
+  for (int i=0; i < mon_strip.numPixels(); i++) {
+        mon_strip.setPixelColor(i, off);   
+//        mon_strip.setBrightness(255);
+        }
+        mon_strip.show();
+}
+
+
+/***********************************************************
+*                         vuMeter                          *
+***********************************************************/
+
+/*
+LED VU meter for Arduino and Adafruit NeoPixel LEDs. More info: http://learn.adafruit.com/led-ampli-tie/
+ 
+ Written by Adafruit Industries.  Distributed under the BSD license.
+ This paragraph must be included in any redistribution.
+ 
+ fscale function:
+ Floating Point Autoscale Function V0.1
+ Written by Paul Badger 2007
+ Modified from code by Greg Shakar
+ 
+*/
 void vuMeter(){
  // Code below is from adafruit amplitie. use parts as needed in other code. Be sure to credit original source.  
   unsigned long startMillis= millis();  // Start of sample window
@@ -396,77 +528,4 @@ uint32_t Wheel(byte WheelPos) {
   }
 }
 
-  //respond to audio input and make VU meters with the neopixel strips
 
-void attract(){
-  moboLightsBlue();
-  Serial.print("attract loop");
-      for (int q=0; q < 3; q++) {
-        for (int i=0; i < bl_strip.numPixels(); i=i+3) {
-        bl_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
-        br_strip.setPixelColor(i+q, 0,0,255);    //turn every third pixel on
-      }
-      bl_strip.show();
-      br_strip.show();
-      delay(50);
-     
-      for (int i=0; i < bl_strip.numPixels(); i=i+3) {
-        bl_strip.setPixelColor(i+q, 0);        //turn every third pixel off
-        br_strip.setPixelColor(i+q, 0);        //turn every third pixel off
-    }
-  }
-loop();
-}
-  // do some fancy rainbow flashy thingys to make it more attractive
-
-void checkRawAudio(){ // Pseudo interrupt to get more quickly back to VU meter
-      rawAudioVal = analogRead(AUDIO_IN);
-      Serial.println(rawAudioVal);
-      if (rawAudioVal < 510){
-        for (int i=0; i < bl_strip.numPixels(); i++) {
-          bl_strip.setPixelColor(i, 0);    //turn every third pixel on
-          br_strip.setPixelColor(i, 0);    //turn every third pixel on       
-        }
-       bl_strip.show();
-       br_strip.show(); 
-       loop(); 
-      }  
-}
-
-void moboLightsRed(){
-uint32_t red = mon_strip.Color(255,0,0);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, red);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
-}
-  
-  
-void moboLightsWhite(){
-uint32_t fullWhite = mon_strip.Color(255,255,255);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, fullWhite);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
-}
-
-
-void moboLightsBlue(){
-uint32_t blue = mon_strip.Color(0,0,255);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, blue);   
-        mon_strip.setBrightness(255);
-        }
-        mon_strip.show();
-}
-
-void moboLightsOff(){
-uint32_t off = mon_strip.Color(0,0,0);
-  for (int i=0; i < mon_strip.numPixels(); i++) {
-        mon_strip.setPixelColor(i, off);   
-        mon_strip.setBrightness(0);
-        }
-        mon_strip.show();
-}
