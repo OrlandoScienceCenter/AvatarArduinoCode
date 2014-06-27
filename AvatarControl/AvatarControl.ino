@@ -67,7 +67,7 @@ void setup(){
   pinMode(BR_NEOPIXEL_S, OUTPUT);
   pinMode(MON_NEOPIXEL_S, OUTPUT);
   pinMode(SPARE_NEOPIXEL_S, OUTPUT);
-  pinMode(COMPUTER_PWR, INPUT_PULLUP);
+  pinMode(COMPUTER_PWR, INPUT);      // Set initially to INPUT to act like high impedance (we'll triger it as output later)
   pinMode(COMPUTER_SENSE, INPUT);
   
   // Initialize serial for debug
